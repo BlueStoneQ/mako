@@ -1,0 +1,30 @@
+{
+  "name": "@mako/tools",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.0"
+  },
+  "peerDependencies": {
+    "@mako/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@mako/core": "workspace:*",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0",
+    "tsup": "^8.0.0",
+    "vitest": "^1.6.0"
+  }
+}

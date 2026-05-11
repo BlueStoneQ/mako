@@ -1,0 +1,24 @@
+{
+  "name": "@mako/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "mako": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mako/core": "workspace:*",
+    "@mako/tools": "workspace:*",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
