@@ -156,15 +156,13 @@ async function main() {
   console.log(chalk.cyan('Mako v0.1 — AI Coding Agent'));
   console.log(chalk.gray('输入消息开始对话，Ctrl+C 退出\n'));
 
-  /** 工具执行确认回调 — v0.1 自动信任，仅显示提示 */
-  const confirmTool: ToolConfirmFn = async (toolName) => {
-    // 只读工具不需要提示
-    if (!DANGEROUS_TOOLS.has(toolName)) return true;
-    // v0.1: 自动信任，后续版本加交互确认
-    return true;
-  };
+  let trustAll = false;
 
   const rl = createInterface({ input: stdin, output: stdout, terminal: true });
+
+  /** 工具执行确认回调 — 自动信任（交互确认需要重构 stdin 管理） */
+  const confirmTool: ToolConfirmFn = async () => true;
+
   rl.setPrompt(chalk.green('> '));
   rl.prompt();
 
