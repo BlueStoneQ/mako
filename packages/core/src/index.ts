@@ -11,7 +11,10 @@ export type {
   LLMConfig,
   ContextConfig,
   AgentEvent,
+  ToolConfirmFn,
 } from './types.js';
+
+export { DANGEROUS_TOOLS } from './types.js';
 
 // LLM
 export type { ChatOptions, LLMAdapter } from './llm/types.js';

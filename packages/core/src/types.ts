@@ -75,3 +75,9 @@ export type AgentEvent =
   | { type: 'tool_end'; name: string; result: string; error: boolean }
   | { type: 'done'; content: string; iterations: number }
   | { type: 'error'; message: string };
+
+/** 工具执行确认回调，返回 true 允许执行，false 跳过 */
+export type ToolConfirmFn = (toolName: string, args: Record<string, unknown>) => Promise<boolean>;
+
+/** 需要确认的危险工具列表 */
+export const DANGEROUS_TOOLS = new Set(['bash', 'write_file', 'replace_in_file']);

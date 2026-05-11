@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
-import { Agent, OpenAIAdapter, ToolRegistry } from '@mako/core';
+import { Agent, OpenAIAdapter, ToolRegistry, DANGEROUS_TOOLS } from '@mako/core';
+import type { ToolConfirmFn } from '@mako/core';
 import {
   readFileTool, writeFileTool, replaceInFileTool,
   listDirectoryTool, bashTool, searchTool, fetchUrlTool,
@@ -155,6 +156,14 @@ async function main() {
   console.log(chalk.cyan('Mako v0.1 — AI Coding Agent'));
   console.log(chalk.gray('输入消息开始对话，Ctrl+C 退出\n'));
 
+  /** 工具执行确认回调 — v0.1 自动信任，仅显示提示 */
+  const confirmTool: ToolConfirmFn = async (toolName) => {
+    // 只读工具不需要提示
+    if (!DANGEROUS_TOOLS.has(toolName)) return true;
+    // v0.1: 自动信任，后续版本加交互确认
+    return true;
+  };
+
   const rl = createInterface({ input: stdin, output: stdout, terminal: true });
   rl.setPrompt(chalk.green('> '));
   rl.prompt();
@@ -184,7 +193,7 @@ async function main() {
       let hasOutput = false;
       const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
 
-      for await (const event of agent.chatStream(message)) {
+      for await (const event of agent.chatStream(message, confirmTool)) {
         switch (event.type) {
           case 'text_delta':
             if (!hasOutput) {

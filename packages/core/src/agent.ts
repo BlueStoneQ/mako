@@ -1,4 +1,5 @@
-import type { AgentConfig, AgentEvent, ToolCall } from './types.js';
+import type { AgentConfig, AgentEvent, ToolCall, ToolConfirmFn } from './types.js';
+import { DANGEROUS_TOOLS } from './types.js';
 import type { LLMAdapter } from './llm/types.js';
 import { ContextManager } from './context/context-manager.js';
 import { ToolRegistry } from './tools/tool-registry.js';
@@ -8,16 +9,23 @@ export interface AgentResponse {
   iterations: number;
 }
 
+export interface AgentOptions {
+  /** 工具执行前的确认回调，仅对危险工具生效 */
+  confirmTool?: ToolConfirmFn;
+}
+
 export class Agent {
   private llm: LLMAdapter;
   private context: ContextManager;
   private toolRegistry: ToolRegistry;
   private maxIterations: number;
+  private confirmTool?: ToolConfirmFn;
 
-  constructor(config: AgentConfig, llm: LLMAdapter, toolRegistry: ToolRegistry) {
+  constructor(config: AgentConfig, llm: LLMAdapter, toolRegistry: ToolRegistry, options?: AgentOptions) {
     this.llm = llm;
     this.toolRegistry = toolRegistry;
     this.maxIterations = config.maxIterations;
+    this.confirmTool = options?.confirmTool;
     this.context = new ContextManager(
       config.systemPrompt,
       config.contextConfig,
@@ -70,8 +78,8 @@ export class Agent {
     throw new Error(`Agent exceeded maximum iterations (${this.maxIterations})`);
   }
 
-  /** 流式对话 — 通过 AsyncGenerator yield AgentEvent */
-  async *chatStream(userMessage: string): AsyncGenerator<AgentEvent> {
+  /** 流式对话 — 通过 AsyncGenerator yield AgentEvent，支持工具确认回调 */
+  async *chatStream(userMessage: string, confirmFn?: ToolConfirmFn): AsyncGenerator<AgentEvent> {
     this.context.addMessage({ role: 'user', content: userMessage });
 
     let iterations = 0;
@@ -84,59 +92,34 @@ export class Agent {
       const messages = this.context.assemble();
       const tools = this.toolRegistry.listForLLM();
 
-      // 使用流式调用
+      // 用流式调用获取文本，用非流式获取 tool_calls（流式 tool_call 累积复杂）
       let fullContent = '';
-      const toolCalls: ToolCall[] = [];
-      const toolCallAccumulators = new Map<number, { id: string; name: string; arguments: string }>();
+      let hasToolCalls = false;
 
       for await (const chunk of this.llm.stream(messages, { tools: tools.length > 0 ? tools : undefined })) {
         if (chunk.type === 'text_delta' && chunk.content) {
           fullContent += chunk.content;
           yield { type: 'text_delta', content: chunk.content };
         }
-
-        if (chunk.type === 'tool_call_delta' && chunk.toolCall) {
-          const tc = chunk.toolCall;
-          // 累积 tool call 信息（流式中 tool call 是分块到达的）
-          // 这里只是累积，完整的 tool call 在 done 时处理
-          if (tc.id) {
-            const idx = toolCallAccumulators.size;
-            if (!toolCallAccumulators.has(idx)) {
-              toolCallAccumulators.set(idx, { id: tc.id, name: tc.name ?? '', arguments: '' });
-            }
-          }
-          // 更新最后一个累积器
-          const lastIdx = toolCallAccumulators.size - 1;
-          if (lastIdx >= 0) {
-            const acc = toolCallAccumulators.get(lastIdx)!;
-            if (tc.name && !acc.name) acc.name = tc.name;
-            if (tc.arguments) {
-              // arguments 已经被 adapter 解析过了，这里用原始字符串累积
-            }
-          }
+        if (chunk.type === 'tool_call_delta') {
+          hasToolCalls = true;
         }
-
-        if (chunk.type === 'done') {
-          break;
-        }
+        if (chunk.type === 'done') break;
       }
 
-      // 如果有文本内容，说明是最终回答
-      if (fullContent && toolCallAccumulators.size === 0) {
+      // 纯文本回答
+      if (fullContent && !hasToolCalls) {
         this.context.addMessage({ role: 'assistant', content: fullContent });
         yield { type: 'done', content: fullContent, iterations };
         return;
       }
 
-      // 如果有 tool calls，需要用非流式方式重新获取完整的 tool_calls
-      // （因为流式 tool_call 累积比较复杂，这里用 fallback 策略）
-      if (fullContent === '' || toolCallAccumulators.size > 0) {
-        // 用非流式调用获取完整响应
+      // 有 tool_calls — 用非流式重新获取完整响应
+      if (hasToolCalls || !fullContent) {
         const response = await this.llm.chat(messages, { tools: tools.length > 0 ? tools : undefined });
 
         if (response.type === 'text') {
           this.context.addMessage({ role: 'assistant', content: response.content });
-          // 如果流式已经输出了部分文本，这里不重复输出
           if (!fullContent) {
             yield { type: 'text_delta', content: response.content };
           }
@@ -153,6 +136,21 @@ export class Agent {
 
           for (const toolCall of response.toolCalls) {
             yield { type: 'tool_start', name: toolCall.name, arguments: toolCall.arguments };
+
+            // 确认回调
+            if (confirmFn) {
+              const confirmed = await confirmFn(toolCall.name, toolCall.arguments);
+              if (!confirmed) {
+                const skipResult = `用户拒绝执行 ${toolCall.name}`;
+                this.context.addMessage({
+                  role: 'tool',
+                  content: skipResult,
+                  toolCallId: toolCall.id,
+                });
+                yield { type: 'tool_end', name: toolCall.name, result: skipResult, error: true };
+                continue;
+              }
+            }
 
             let result: string;
             let isError = false;
