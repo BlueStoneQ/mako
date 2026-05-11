@@ -176,16 +176,55 @@ async function main() {
     // 清除 readline 回显的输入行，避免重复显示
     process.stdout.write('\x1B[1A\x1B[2K');
 
-    const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
+    // 显示用户输入（带颜色）
+    console.log(chalk.green('> ') + chalk.white(message));
+    console.log();
 
     try {
-      const response = await agent.chat(message);
-      spinner.stop();
-      console.log(chalk.white(response.content));
-      console.log(chalk.gray(`(${response.iterations} 轮)`));
+      let hasOutput = false;
+      const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
+
+      for await (const event of agent.chatStream(message)) {
+        switch (event.type) {
+          case 'text_delta':
+            if (!hasOutput) {
+              spinner.stop();
+              hasOutput = true;
+            }
+            process.stdout.write(event.content);
+            break;
+
+          case 'tool_start':
+            if (!hasOutput) {
+              spinner.stop();
+              hasOutput = true;
+            }
+            console.log(chalk.cyan(`  ⚡ ${event.name}`) + chalk.gray(` ${formatArgs(event.arguments)}`));
+            break;
+
+          case 'tool_end':
+            if (event.error) {
+              console.log(chalk.red(`  ✗ 失败: `) + chalk.gray(truncate(event.result, 100)));
+            } else {
+              console.log(chalk.green(`  ✓ 完成`) + chalk.gray(` ${truncate(event.result, 80)}`));
+            }
+            console.log();
+            break;
+
+          case 'done':
+            if (!hasOutput) spinner.stop();
+            if (hasOutput) console.log(); // 换行结束流式文本
+            console.log(chalk.gray(`(${event.iterations} 轮)`));
+            break;
+
+          case 'error':
+            spinner.stop();
+            console.log(chalk.red(`\n错误: ${event.message}`));
+            break;
+        }
+      }
     } catch (error) {
-      spinner.stop();
-      console.error(chalk.red(`错误: ${(error as Error).message}`));
+      console.error(chalk.red(`\n错误: ${(error as Error).message}`));
     }
 
     // 保存会话
@@ -201,6 +240,23 @@ async function main() {
     console.log(chalk.gray('\n再见！'));
     process.exit(0);
   });
+}
+
+/** 格式化工具参数为简短字符串 */
+function formatArgs(args: Record<string, unknown>): string {
+  const entries = Object.entries(args);
+  if (entries.length === 0) return '';
+  return entries.map(([k, v]) => {
+    const val = typeof v === 'string' ? truncate(v, 40) : JSON.stringify(v);
+    return `${k}: ${val}`;
+  }).join(', ');
+}
+
+/** 截断字符串 */
+function truncate(str: string, maxLen: number): string {
+  const oneLine = str.replace(/\n/g, ' ').trim();
+  if (oneLine.length <= maxLen) return oneLine;
+  return oneLine.slice(0, maxLen - 3) + '...';
 }
 
 main().catch((error) => {

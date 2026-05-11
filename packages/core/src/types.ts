@@ -67,3 +67,11 @@ export interface ContextConfig {
   compressThreshold: number;
   sessionDir: string;
 }
+
+/** Agent 流式事件 */
+export type AgentEvent =
+  | { type: 'text_delta'; content: string }
+  | { type: 'tool_start'; name: string; arguments: Record<string, unknown> }
+  | { type: 'tool_end'; name: string; result: string; error: boolean }
+  | { type: 'done'; content: string; iterations: number }
+  | { type: 'error'; message: string };

@@ -10,6 +10,7 @@ export type {
   AgentConfig,
   LLMConfig,
   ContextConfig,
+  AgentEvent,
 } from './types.js';
 
 // LLM
