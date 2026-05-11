@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AgentConfig, LLMConfig, ContextConfig } from '@mako/core';
+import { DEFAULT_SYSTEM_PROMPT } from './system-prompt.js';
 
 export interface MakoConfig {
   llm: LLMConfig;
@@ -42,7 +43,7 @@ export function loadConfig(): MakoConfig {
     llm,
     agent: {
       maxIterations: (agentFile.maxIterations as number) || 20,
-      systemPrompt: (agentFile.systemPrompt as string) || '你是 Mako，一个 AI 编程助手。你可以使用工具来帮助用户完成编码任务。',
+      systemPrompt: (agentFile.systemPrompt as string) || DEFAULT_SYSTEM_PROMPT,
       contextConfig,
     },
   };

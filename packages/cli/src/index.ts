@@ -194,26 +194,39 @@ async function main() {
             process.stdout.write(event.content);
             break;
 
-          case 'tool_start':
+          case 'tool_start': {
             if (!hasOutput) {
               spinner.stop();
               hasOutput = true;
             }
-            console.log(chalk.cyan(`  ⚡ ${event.name}`) + chalk.gray(` ${formatArgs(event.arguments)}`));
+            // 工具调用显示：类似 Kiro/Claude Code 风格
+            const toolLabel = chalk.bgCyan.black(` ${event.name} `);
+            console.log(`\n  ${toolLabel}`);
+            // 显示参数详情
+            for (const [key, val] of Object.entries(event.arguments)) {
+              const displayVal = typeof val === 'string' ? val : JSON.stringify(val);
+              console.log(chalk.gray(`  │ ${key}: `) + chalk.white(truncate(displayVal, 70)));
+            }
+            // 工具执行中的 loading
+            spinner.text = '执行中...';
+            spinner.start();
             break;
+          }
 
           case 'tool_end':
+            spinner.stop();
             if (event.error) {
-              console.log(chalk.red(`  ✗ 失败: `) + chalk.gray(truncate(event.result, 100)));
+              console.log(chalk.red(`  ✗ 失败: ${truncate(event.result, 120)}`));
             } else {
-              console.log(chalk.green(`  ✓ 完成`) + chalk.gray(` ${truncate(event.result, 80)}`));
+              const resultPreview = truncate(event.result, 100);
+              console.log(chalk.green(`  ✓ `) + chalk.gray(resultPreview));
             }
             console.log();
             break;
 
           case 'done':
             if (!hasOutput) spinner.stop();
-            if (hasOutput) console.log(); // 换行结束流式文本
+            if (hasOutput) console.log();
             console.log(chalk.gray(`(${event.iterations} 轮)`));
             break;
 
@@ -240,16 +253,6 @@ async function main() {
     console.log(chalk.gray('\n再见！'));
     process.exit(0);
   });
-}
-
-/** 格式化工具参数为简短字符串 */
-function formatArgs(args: Record<string, unknown>): string {
-  const entries = Object.entries(args);
-  if (entries.length === 0) return '';
-  return entries.map(([k, v]) => {
-    const val = typeof v === 'string' ? truncate(v, 40) : JSON.stringify(v);
-    return `${k}: ${val}`;
-  }).join(', ');
 }
 
 /** 截断字符串 */
