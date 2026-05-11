@@ -11,6 +11,8 @@ import {
   listDirectoryTool, bashTool, searchTool, fetchUrlTool,
 } from '@mako/tools';
 import { loadConfig } from './config.js';
+import { loadSteering } from './steering.js';
+import { TraceCollector, saveTrace, loadTraces, summarizeTraces } from './trace.js';
 
 const VERSION = '0.1.0';
 
@@ -20,6 +22,7 @@ ${chalk.cyan('Mako')} — 开源 AI Coding Agent
 ${chalk.bold('用法:')}
   mako              启动交互式对话
   mako config       配置模型（API Key、接口地址、模型名称）
+  mako trace        分析 Agent 执行历史（AI 辅助分析）
   mako --help       显示帮助信息
   mako --version    显示版本号
 
@@ -54,6 +57,10 @@ if (args.includes('--version') || args.includes('-v')) {
 }
 if (args[0] === 'config') {
   await runConfig();
+  process.exit(0);
+}
+if (args[0] === 'trace') {
+  await runTrace();
   process.exit(0);
 }
 
@@ -128,6 +135,32 @@ function loadConfigOrExit() {
   }
 }
 
+/** Trace 分析命令 */
+async function runTrace() {
+  const traces = loadTraces();
+  if (traces.length === 0) {
+    console.log(chalk.gray('没有找到 Trace 记录。使用 mako 对话后会自动生成。'));
+    return;
+  }
+
+  const summary = summarizeTraces(traces);
+  console.log(summary);
+
+  // 用 LLM 分析
+  const config = loadConfigOrExit();
+  const llm = new OpenAIAdapter(config.llm);
+  console.log(chalk.gray('\n正在用 AI 分析...\n'));
+
+  const response = await llm.chat([
+    { role: 'system', content: '你是一个 AI Agent 性能分析师。根据以下执行数据，给出改进建议。' },
+    { role: 'user', content: `请分析以下 Mako Agent 的执行数据，指出性能瓶颈和改进方向：\n\n${summary}` },
+  ]);
+
+  if (response.type === 'text') {
+    console.log(response.content);
+  }
+}
+
 async function main() {
   const config = loadConfigOrExit();
 
@@ -143,8 +176,12 @@ async function main() {
   toolRegistry.register(searchTool);
   toolRegistry.register(fetchUrlTool);
 
+  // 加载 Steering 规则
+  const steering = loadSteering();
+  const systemPrompt = config.agent.systemPrompt + steering;
+
   const agent = new Agent(
-    { ...config.agent, llm: config.llm },
+    { ...config.agent, systemPrompt, llm: config.llm },
     llm,
     toolRegistry,
   );
@@ -190,8 +227,11 @@ async function main() {
     try {
       let hasOutput = false;
       const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
+      const trace = new TraceCollector();
+      trace.start(message);
 
       for await (const event of agent.chatStream(message, confirmTool)) {
+        trace.record(event);
         switch (event.type) {
           case 'text_delta':
             if (!hasOutput) {
@@ -247,8 +287,9 @@ async function main() {
       console.error(chalk.red(`\n错误: ${(error as Error).message}`));
     }
 
-    // 保存会话
+    // 保存会话 + Trace
     await agent.getContext().save(sessionId);
+    saveTrace(trace.finalize());
     console.log();
     processing = false;
     rl.resume();
