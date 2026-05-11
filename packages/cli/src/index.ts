@@ -173,6 +173,9 @@ async function main() {
     processing = true;
     rl.pause();
 
+    // 清除 readline 回显的输入行，避免重复显示
+    process.stdout.write('\x1B[1A\x1B[2K');
+
     const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
 
     try {
