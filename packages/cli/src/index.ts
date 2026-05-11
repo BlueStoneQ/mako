@@ -155,16 +155,23 @@ async function main() {
   console.log(chalk.cyan('Mako v0.1 — AI Coding Agent'));
   console.log(chalk.gray('输入消息开始对话，Ctrl+C 退出\n'));
 
-  const rl = createInterface({ input: stdin, output: stdout });
+  const rl = createInterface({ input: stdin, output: stdout, terminal: true });
   rl.setPrompt(chalk.green('> '));
   rl.prompt();
 
+  let processing = false;
+
   rl.on('line', async (line: string) => {
+    if (processing) return;
+
     const message = line.trim();
     if (!message) {
       rl.prompt();
       return;
     }
+
+    processing = true;
+    rl.pause();
 
     const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
 
@@ -181,6 +188,8 @@ async function main() {
     // 保存会话
     await agent.getContext().save(sessionId);
     console.log();
+    processing = false;
+    rl.resume();
     rl.prompt();
   });
 
