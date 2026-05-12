@@ -217,6 +217,8 @@ async function main() {
     processing = true;
     rl.pause();
 
+    const trace = new TraceCollector();
+
     // 清除 readline 回显的输入行，避免重复显示
     process.stdout.write('\x1B[1A\x1B[2K');
 
@@ -227,7 +229,6 @@ async function main() {
     try {
       let hasOutput = false;
       const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
-      const trace = new TraceCollector();
       trace.start(message);
 
       for await (const event of agent.chatStream(message, confirmTool)) {
@@ -275,6 +276,8 @@ async function main() {
             if (!hasOutput) spinner.stop();
             if (hasOutput) console.log();
             console.log(chalk.gray(`(${event.iterations} 轮)`));
+            // 保存 Trace
+            try { saveTrace(trace.finalize()); } catch { /* ignore */ }
             break;
 
           case 'error':
