@@ -12,6 +12,7 @@ Mako is an open-source AI Coding Agent that runs in your terminal. It can read c
 - 🔌 **Model-agnostic** — Works with GPT, Claude, MiMo, DeepSeek, local models
 - 📊 **Observable** — Built-in execution tracing with AI-powered analysis (`mako trace`)
 - 🎯 **Steerable** — Project-level rules via `.mako/steering.md`
+- 🧠 **Long context** — 5-layer context pipeline supports 100+ round conversations without context explosion
 - 🛠️ **Extensible** — Plugin-ready architecture (microkernel design)
 
 ## Quick Start
