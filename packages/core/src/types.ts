@@ -72,9 +72,13 @@ export interface ContextConfig {
 export type AgentEvent =
   | { type: 'text_delta'; content: string }
   | { type: 'tool_start'; name: string; arguments: Record<string, unknown> }
+  | { type: 'tool_confirm'; name: string; arguments: Record<string, unknown> }
   | { type: 'tool_end'; name: string; result: string; error: boolean }
   | { type: 'done'; content: string; iterations: number }
   | { type: 'error'; message: string };
+
+/** chatStream 的 next() 传入值类型 */
+export type AgentStreamInput = boolean | undefined;
 
 /** 工具执行确认回调，返回 true 允许执行，false 跳过 */
 export type ToolConfirmFn = (toolName: string, args: Record<string, unknown>) => Promise<boolean>;

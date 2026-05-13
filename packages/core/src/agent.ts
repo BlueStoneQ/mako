@@ -1,4 +1,4 @@
-import type { AgentConfig, AgentEvent, ToolCall, ToolConfirmFn } from './types.js';
+import type { AgentConfig, AgentEvent, AgentStreamInput, ToolCall, ToolConfirmFn } from './types.js';
 import { DANGEROUS_TOOLS } from './types.js';
 import type { LLMAdapter } from './llm/types.js';
 import { ContextPipeline } from './context/context-pipeline.js';
@@ -81,8 +81,8 @@ export class Agent {
     throw new Error(`Agent exceeded maximum iterations (${this.maxIterations})`);
   }
 
-  /** 流式对话 — 通过 AsyncGenerator yield AgentEvent，支持工具确认回调 */
-  async *chatStream(userMessage: string, confirmFn?: ToolConfirmFn): AsyncGenerator<AgentEvent> {
+  /** 流式对话 — 通过 AsyncGenerator yield AgentEvent，双向通信支持确认 */
+  async *chatStream(userMessage: string): AsyncGenerator<AgentEvent, void, AgentStreamInput> {
     this.context.addMessage({ role: 'user', content: userMessage });
 
     let iterations = 0;
@@ -140,10 +140,10 @@ export class Agent {
           for (const toolCall of response.toolCalls) {
             yield { type: 'tool_start', name: toolCall.name, arguments: toolCall.arguments };
 
-            // 确认回调
-            if (confirmFn) {
-              const confirmed = await confirmFn(toolCall.name, toolCall.arguments);
-              if (!confirmed) {
+            // 危险工具需要确认：yield tool_confirm，等待 CLI 通过 next() 传回 boolean
+            if (DANGEROUS_TOOLS.has(toolCall.name)) {
+              const confirmed: AgentStreamInput = yield { type: 'tool_confirm', name: toolCall.name, arguments: toolCall.arguments };
+              if (confirmed === false) {
                 const skipResult = `用户拒绝执行 ${toolCall.name}`;
                 this.context.addMessage({
                   role: 'tool',

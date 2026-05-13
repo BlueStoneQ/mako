@@ -4,8 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
-import { Agent, OpenAIAdapter, ToolRegistry, DANGEROUS_TOOLS } from '@mako/core';
-import type { ToolConfirmFn } from '@mako/core';
+import { Agent, OpenAIAdapter, ToolRegistry } from '@mako/core';
 import {
   readFileTool, writeFileTool, replaceInFileTool,
   listDirectoryTool, bashTool, searchTool, fetchUrlTool,
@@ -197,8 +196,27 @@ async function main() {
 
   const rl = createInterface({ input: stdin, output: stdout, terminal: true });
 
-  /** 工具执行确认回调 — 自动信任（交互确认需要重构 stdin 管理） */
-  const confirmTool: ToolConfirmFn = async () => true;
+  /** 等待用户按键确认（y/n/a） */
+  function waitForConfirm(): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      process.stdout.write(
+        chalk.yellow('  ? 执行? ') + chalk.gray('[y/n/a(全部信任)] ')
+      );
+      rl.resume();
+      rl.once('line', (answer) => {
+        rl.pause();
+        const a = answer.trim().toLowerCase();
+        if (a === 'a') {
+          trustAll = true;
+          resolve(true);
+        } else if (a === 'n') {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+    });
+  }
 
   rl.setPrompt(chalk.green('> '));
   rl.prompt();
@@ -231,8 +249,17 @@ async function main() {
       const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
       trace.start(message);
 
-      for await (const event of agent.chatStream(message, confirmTool)) {
+      // 使用手动 next() 调用实现双向通信
+      const gen = agent.chatStream(message);
+      let nextInput: boolean | undefined = undefined;
+
+      while (true) {
+        const { value: event, done } = await gen.next(nextInput);
+        if (done || !event) break;
+
+        nextInput = undefined; // 默认不传值
         trace.record(event);
+
         switch (event.type) {
           case 'text_delta':
             if (!hasOutput) {
@@ -247,17 +274,22 @@ async function main() {
               spinner.stop();
               hasOutput = true;
             }
-            // 工具调用显示：类似 Kiro/Claude Code 风格
             const toolLabel = chalk.bgCyan.black(` ${event.name} `);
             console.log(`\n  ${toolLabel}`);
-            // 显示参数详情
             for (const [key, val] of Object.entries(event.arguments)) {
               const displayVal = typeof val === 'string' ? val : JSON.stringify(val);
               console.log(chalk.gray(`  │ ${key}: `) + chalk.white(truncate(displayVal, 70)));
             }
-            // 工具执行中的 loading
-            spinner.text = '执行中...';
-            spinner.start();
+            break;
+          }
+
+          case 'tool_confirm': {
+            // 危险工具确认 — 等待用户输入
+            if (trustAll) {
+              nextInput = true;
+            } else {
+              nextInput = await waitForConfirm();
+            }
             break;
           }
 
@@ -276,8 +308,6 @@ async function main() {
             if (!hasOutput) spinner.stop();
             if (hasOutput) console.log();
             console.log(chalk.gray(`(${event.iterations} 轮)`));
-            // 保存 Trace
-            try { saveTrace(trace.finalize()); } catch { /* ignore */ }
             break;
 
           case 'error':

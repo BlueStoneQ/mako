@@ -11,6 +11,7 @@ export type {
   LLMConfig,
   ContextConfig,
   AgentEvent,
+  AgentStreamInput,
   ToolConfirmFn,
 } from './types.js';
 
