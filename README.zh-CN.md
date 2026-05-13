@@ -144,10 +144,24 @@ Agent 整体表现良好。bash 工具有 1 次错误，建议检查...
 | 命令 | 说明 |
 |------|------|
 | `mako` | 启动交互式对话 |
-| `mako config` | 配置模型（API Key、接口地址、模型名） |
+| `mako config` | 配置默认模型 |
+| `mako config add <名称>` | 添加模型预设 |
+| `mako config list` | 列出所有已配置模型 |
+| `mako config remove <名称>` | 删除模型预设 |
 | `mako trace` | 分析 Agent 执行历史（AI 辅助分析） |
 | `mako --help` | 显示帮助 |
 | `mako --version` | 显示版本 |
+
+### 对话中命令
+
+| 命令 | 说明 |
+|------|------|
+| `/model` | 查看可用模型 |
+| `/model <名称>` | 切换到指定模型 |
+| `/spec <功能名>` | 进入 Spec 模式（需求→设计→任务→执行） |
+| `/vibe` | 切回自由对话模式 |
+| `/clear` | 清空当前会话 |
+| `/help` | 显示可用命令 |
 
 ## 配置
 

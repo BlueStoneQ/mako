@@ -106,10 +106,24 @@ Create `.mako/steering.md` (or `.mako/steering/*.md`) to give Mako project-speci
 | Command | Description |
 |---------|-------------|
 | `mako` | Start interactive chat |
-| `mako config` | Configure model (API Key, base URL, model name) |
+| `mako config` | Configure default model |
+| `mako config add <name>` | Add a model preset |
+| `mako config list` | List all configured models |
+| `mako config remove <name>` | Remove a model preset |
 | `mako trace` | Analyze execution history with AI |
 | `mako --help` | Show help |
 | `mako --version` | Show version |
+
+### In-chat Commands
+
+| Command | Description |
+|---------|-------------|
+| `/model` | List available models |
+| `/model <name>` | Switch to a different model |
+| `/spec <name>` | Enter Spec mode (requirements → design → tasks → execute) |
+| `/vibe` | Switch back to free chat mode |
+| `/clear` | Clear current session |
+| `/help` | Show available commands |
 
 ## Configuration
 

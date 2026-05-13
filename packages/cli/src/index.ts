@@ -21,11 +21,14 @@ const HELP = `
 ${chalk.cyan('Mako')} — 开源 AI Coding Agent
 
 ${chalk.bold('用法:')}
-  mako              启动交互式对话
-  mako config       配置模型（API Key、接口地址、模型名称）
-  mako trace        分析 Agent 执行历史（AI 辅助分析）
-  mako --help       显示帮助信息
-  mako --version    显示版本号
+  mako                    启动交互式对话
+  mako config             配置默认模型
+  mako config add <名称>  添加模型预设
+  mako config list        列出所有模型
+  mako config remove <名称>  删除模型预设
+  mako trace              分析 Agent 执行历史（AI 辅助分析）
+  mako --help             显示帮助信息
+  mako --version          显示版本号
 
 ${chalk.bold('配置:')}
   环境变量:
@@ -57,7 +60,16 @@ if (args.includes('--version') || args.includes('-v')) {
   process.exit(0);
 }
 if (args[0] === 'config') {
-  await runConfig();
+  const subCmd = args[1];
+  if (subCmd === 'add') {
+    await runConfigAdd(args.slice(2));
+  } else if (subCmd === 'list') {
+    runConfigList();
+  } else if (subCmd === 'remove') {
+    runConfigRemove(args[2]);
+  } else {
+    await runConfig();
+  }
   process.exit(0);
 }
 if (args[0] === 'trace') {
@@ -125,6 +137,107 @@ async function runConfig() {
 function maskKey(key: string): string {
   if (key.length <= 8) return '****';
   return `${key.slice(0, 4)}...${key.slice(-4)}`;
+}
+
+/** 添加模型预设 */
+async function runConfigAdd(args: string[]) {
+  const configDir = join(process.cwd(), '.mako');
+  const configPath = join(configDir, 'config.json');
+
+  let existing: Record<string, unknown> = {};
+  if (existsSync(configPath)) {
+    try { existing = JSON.parse(readFileSync(configPath, 'utf-8')); } catch { /* */ }
+  }
+
+  const models = (existing.models || {}) as Record<string, Record<string, string>>;
+  const defaultLlm = (existing.llm || {}) as Record<string, string>;
+
+  const name = args[0];
+  if (!name) {
+    console.log(chalk.yellow('用法: mako config add <模型名称>'));
+    console.log(chalk.gray('例如: mako config add gpt4'));
+    return;
+  }
+
+  console.log(chalk.cyan(`\n添加模型预设: ${name}\n`));
+
+  const rl = createInterface({ input: stdin, output: stdout });
+  const question = (prompt: string): Promise<string> =>
+    new Promise((resolve) => rl.question(prompt, resolve));
+
+  const baseUrl = await question(
+    chalk.white(`接口地址 ${chalk.gray(`[${defaultLlm.baseUrl || 'https://api.openai.com/v1'}]`)}: `),
+  );
+  const model = await question(
+    chalk.white(`模型名称: `),
+  );
+  const apiKey = await question(
+    chalk.white(`API Key ${chalk.gray('[回车使用默认 Key]')}: `),
+  );
+
+  rl.close();
+
+  models[name] = {
+    baseUrl: baseUrl.trim() || defaultLlm.baseUrl || 'https://api.openai.com/v1',
+    model: model.trim() || 'gpt-4o',
+    ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+  };
+
+  existing.models = models;
+  mkdirSync(configDir, { recursive: true });
+  writeFileSync(configPath, JSON.stringify(existing, null, 2), 'utf-8');
+
+  console.log(chalk.green(`\n✓ 模型 "${name}" 已添加`));
+  console.log(chalk.gray(`  对话中使用 /model ${name} 切换\n`));
+}
+
+/** 列出所有模型预设 */
+function runConfigList() {
+  const configPath = join(process.cwd(), '.mako', 'config.json');
+
+  let existing: Record<string, unknown> = {};
+  if (existsSync(configPath)) {
+    try { existing = JSON.parse(readFileSync(configPath, 'utf-8')); } catch { /* */ }
+  }
+
+  const defaultLlm = (existing.llm || {}) as Record<string, string>;
+  const models = (existing.models || {}) as Record<string, Record<string, string>>;
+
+  console.log(chalk.bold('\n已配置的模型:\n'));
+  console.log(chalk.green('  → default') + chalk.gray(`: ${defaultLlm.model || 'gpt-4o'} (${defaultLlm.baseUrl || 'https://api.openai.com/v1'})`));
+
+  for (const [name, cfg] of Object.entries(models)) {
+    console.log(chalk.white(`    ${name}`) + chalk.gray(`: ${cfg.model} (${cfg.baseUrl})`));
+  }
+
+  console.log(chalk.gray('\n对话中使用 /model <名称> 切换\n'));
+}
+
+/** 删除模型预设 */
+function runConfigRemove(name: string) {
+  if (!name) {
+    console.log(chalk.yellow('用法: mako config remove <模型名称>'));
+    return;
+  }
+
+  const configDir = join(process.cwd(), '.mako');
+  const configPath = join(configDir, 'config.json');
+
+  let existing: Record<string, unknown> = {};
+  if (existsSync(configPath)) {
+    try { existing = JSON.parse(readFileSync(configPath, 'utf-8')); } catch { /* */ }
+  }
+
+  const models = (existing.models || {}) as Record<string, unknown>;
+  if (!models[name]) {
+    console.log(chalk.red(`模型 "${name}" 不存在`));
+    return;
+  }
+
+  delete models[name];
+  existing.models = models;
+  writeFileSync(configPath, JSON.stringify(existing, null, 2), 'utf-8');
+  console.log(chalk.green(`✓ 模型 "${name}" 已删除\n`));
 }
 
 function loadConfigOrExit() {
