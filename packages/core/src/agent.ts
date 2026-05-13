@@ -1,7 +1,8 @@
 import type { AgentConfig, AgentEvent, ToolCall, ToolConfirmFn } from './types.js';
 import { DANGEROUS_TOOLS } from './types.js';
 import type { LLMAdapter } from './llm/types.js';
-import { ContextManager } from './context/context-manager.js';
+import { ContextPipeline } from './context/context-pipeline.js';
+import { createDefaultPipelineConfig } from './context/pipeline-config.js';
 import { ToolRegistry } from './tools/tool-registry.js';
 
 export interface AgentResponse {
@@ -16,7 +17,7 @@ export interface AgentOptions {
 
 export class Agent {
   private llm: LLMAdapter;
-  private context: ContextManager;
+  private context: ContextPipeline;
   private toolRegistry: ToolRegistry;
   private maxIterations: number;
   private confirmTool?: ToolConfirmFn;
@@ -26,11 +27,13 @@ export class Agent {
     this.toolRegistry = toolRegistry;
     this.maxIterations = config.maxIterations;
     this.confirmTool = options?.confirmTool;
-    this.context = new ContextManager(
-      config.systemPrompt,
-      config.contextConfig,
-      llm,
-    );
+
+    const pipelineConfig = createDefaultPipelineConfig({
+      maxTokens: config.contextConfig.maxTokens,
+      systemPrompt: config.systemPrompt,
+      sessionDir: config.contextConfig.sessionDir,
+    });
+    this.context = new ContextPipeline(pipelineConfig, llm);
   }
 
   async chat(userMessage: string): Promise<AgentResponse> {
@@ -180,7 +183,7 @@ export class Agent {
     return this.toolRegistry;
   }
 
-  getContext(): ContextManager {
+  getContext(): ContextPipeline {
     return this.context;
   }
 }
