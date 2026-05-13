@@ -12,6 +12,8 @@ import {
 import { loadConfig } from './config.js';
 import { loadSteering } from './steering.js';
 import { TraceCollector, saveTrace, loadTraces, summarizeTraces } from './trace.js';
+import { getSpecPrompt, getPhaseLabel } from './spec-prompts.js';
+import type { SpecPhase } from './spec-prompts.js';
 
 const VERSION = '0.1.0';
 
@@ -190,9 +192,12 @@ async function main() {
   await agent.getContext().load(sessionId);
 
   console.log(chalk.cyan('Mako v0.1 — AI Coding Agent'));
-  console.log(chalk.gray('输入消息开始对话，Ctrl+C 退出\n'));
+  console.log(chalk.gray('输入消息开始对话，/spec 进入规划模式，/help 查看命令\n'));
 
   let trustAll = false;
+  let currentMode: 'vibe' | 'spec' = 'vibe';
+  let specPhase: SpecPhase = 'requirements';
+  let specFeatureName = '';
 
   const rl = createInterface({ input: stdin, output: stdout, terminal: true });
 
@@ -232,6 +237,62 @@ async function main() {
       return;
     }
 
+    // 处理斜杠命令
+    if (message.startsWith('/')) {
+      const [cmd, ...rest] = message.slice(1).split(' ');
+      const cmdArg = rest.join(' ').trim();
+
+      switch (cmd) {
+        case 'spec':
+          currentMode = 'spec';
+          specPhase = 'requirements';
+          specFeatureName = cmdArg || 'unnamed';
+          console.log(chalk.magenta(`\n📋 进入 Spec 模式 — ${specFeatureName}`));
+          console.log(chalk.gray(`  阶段: ${getPhaseLabel(specPhase)}`));
+          console.log(chalk.gray(`  输入你的需求描述，Mako 会生成结构化文档\n`));
+          rl.prompt();
+          return;
+
+        case 'vibe':
+          currentMode = 'vibe';
+          console.log(chalk.cyan('\n💬 切换到 Vibe 模式 — 自由对话\n'));
+          rl.prompt();
+          return;
+
+        case 'next':
+          if (currentMode === 'spec') {
+            const phases: SpecPhase[] = ['requirements', 'design', 'tasks', 'execute', 'done'];
+            const currentIdx = phases.indexOf(specPhase);
+            if (currentIdx < phases.length - 2) {
+              specPhase = phases[currentIdx + 1];
+              console.log(chalk.magenta(`\n📋 进入下一阶段: ${getPhaseLabel(specPhase)}\n`));
+            } else {
+              currentMode = 'vibe';
+              console.log(chalk.green('\n✅ Spec 流程完成，切换回 Vibe 模式\n'));
+            }
+          }
+          rl.prompt();
+          return;
+
+        case 'help':
+          console.log(`
+${chalk.bold('命令:')}
+  /spec <名称>    进入 Spec 模式（需求 → 设计 → 任务 → 执行）
+  /vibe           切换到 Vibe 模式（自由对话）
+  /next           Spec 模式下进入下一阶段
+  /help           显示此帮助
+  Ctrl+C          退出
+`);
+          rl.prompt();
+          return;
+
+        default:
+          console.log(chalk.gray(`  未知命令: /${cmd}，输入 /help 查看可用命令`));
+          rl.prompt();
+          return;
+      }
+    }
+
     processing = true;
     rl.pause();
 
@@ -244,13 +305,119 @@ async function main() {
     console.log(chalk.green('> ') + chalk.white(message));
     console.log();
 
+    // 处理斜杠命令
+    if (message.startsWith('/')) {
+      const [cmd, ...args] = message.slice(1).split(' ');
+      switch (cmd) {
+        case 'spec': {
+          const featureName = args.join(' ').trim();
+          if (!featureName) {
+            console.log(chalk.yellow('用法: /spec <功能名称>'));
+            console.log(chalk.gray('例如: /spec 用户认证\n'));
+            processing = false;
+            rl.resume();
+            rl.prompt();
+            return;
+          }
+          currentMode = 'spec';
+          specPhase = 'requirements';
+          specFeatureName = featureName;
+          console.log(chalk.cyan(`🔄 进入 Spec 模式: ${specFeatureName}`));
+          console.log(chalk.gray(`  阶段: ${getPhaseLabel(specPhase)}`));
+          console.log(chalk.gray('  描述你的需求，Mako 会帮你规划\n'));
+          processing = false;
+          rl.resume();
+          rl.prompt();
+          return;
+        }
+        case 'vibe': {
+          currentMode = 'vibe';
+          console.log(chalk.cyan('🔄 切换到 Vibe 模式（自由对话）\n'));
+          processing = false;
+          rl.resume();
+          rl.prompt();
+          return;
+        }
+        case 'help': {
+          console.log(chalk.bold('可用命令:'));
+          console.log('  /spec [功能名]  进入 Spec 模式（需求→设计→任务→执行）');
+          console.log('  /vibe           切换到 Vibe 模式（自由对话）');
+          console.log('  /help           显示此帮助');
+          console.log('  /clear          清空当前会话');
+          console.log();
+          processing = false;
+          rl.resume();
+          rl.prompt();
+          return;
+        }
+        case 'clear': {
+          agent.getContext().clear();
+          console.log(chalk.gray('会话已清空\n'));
+          processing = false;
+          rl.resume();
+          rl.prompt();
+          return;
+        }
+        default: {
+          console.log(chalk.red(`未知命令: /${cmd}。输入 /help 查看可用命令\n`));
+          processing = false;
+          rl.resume();
+          rl.prompt();
+          return;
+        }
+      }
+    }
+
+    // Spec 模式：阶段确认处理
+    if (currentMode === 'spec' && (message === 'y' || message === 'n')) {
+      if (message === 'y') {
+        // 进入下一阶段
+        const phases: SpecPhase[] = ['requirements', 'design', 'tasks', 'execute', 'done'];
+        const currentIdx = phases.indexOf(specPhase);
+        if (currentIdx < phases.length - 1) {
+          specPhase = phases[currentIdx + 1];
+          if (specPhase === 'done') {
+            currentMode = 'vibe';
+            console.log(chalk.green('✅ Spec 流程完成，已切换回 Vibe 模式\n'));
+            processing = false;
+            rl.resume();
+            rl.prompt();
+            return;
+          }
+          console.log(chalk.cyan(`\n🔄 进入阶段: ${getPhaseLabel(specPhase)}\n`));
+          // 自动发送阶段切换消息给 Agent
+          const phaseMsg = `请继续进入${getPhaseLabel(specPhase)}阶段。基于之前的内容继续。`;
+          // 不 return，让下面的 chat 逻辑处理这个消息
+          // 但需要覆盖 message... 这里用 fallthrough
+        }
+      } else {
+        console.log(chalk.gray('请修改后重新输入\n'));
+        processing = false;
+        rl.resume();
+        rl.prompt();
+        return;
+      }
+    }
+
+    // 确定使用的 System Prompt（Spec 模式下按阶段切换）
+    if (currentMode === 'spec') {
+      const specPrompt = getSpecPrompt(specPhase);
+      agent.getContext().updateConfig?.({ systemPrompt: config.agent.systemPrompt + steering + '\n\n' + specPrompt });
+    }
+
     try {
       let hasOutput = false;
       const spinner = ora({ text: '思考中...', color: 'cyan' }).start();
       trace.start(message);
 
+      // Spec 模式下，功能名作为上下文提示
+      let chatMessage = message;
+      if (currentMode === 'spec' && specPhase === 'requirements' && !message.includes(specFeatureName)) {
+        chatMessage = `功能: ${specFeatureName}\n\n${message}`;
+      }
+
       // 使用手动 next() 调用实现双向通信
-      const gen = agent.chatStream(message);
+      const gen = agent.chatStream(chatMessage);
       let nextInput: boolean | undefined = undefined;
 
       while (true) {
@@ -308,6 +475,11 @@ async function main() {
             if (!hasOutput) spinner.stop();
             if (hasOutput) console.log();
             console.log(chalk.gray(`(${event.iterations} 轮)`));
+            // Spec 模式提示
+            if (currentMode === 'spec' && specPhase !== 'done') {
+              console.log(chalk.magenta(`\n  📋 当前阶段: ${getPhaseLabel(specPhase)}`));
+              console.log(chalk.gray(`  输入 /next 进入下一阶段，或继续补充当前阶段`));
+            }
             break;
 
           case 'error':
