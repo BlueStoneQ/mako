@@ -166,6 +166,7 @@ async function main() {
   const config = loadConfigOrExit();
 
   const llm = new OpenAIAdapter(config.llm);
+  let currentLlmConfig = config.llm;
   const toolRegistry = new ToolRegistry();
 
   // 注册内置工具
@@ -342,8 +343,9 @@ ${chalk.bold('命令:')}
           console.log(chalk.bold('可用命令:'));
           console.log('  /spec [功能名]  进入 Spec 模式（需求→设计→任务→执行）');
           console.log('  /vibe           切换到 Vibe 模式（自由对话）');
-          console.log('  /help           显示此帮助');
+          console.log('  /model [名称]   查看/切换模型');
           console.log('  /clear          清空当前会话');
+          console.log('  /help           显示此帮助');
           console.log();
           processing = false;
           rl.resume();
@@ -353,6 +355,27 @@ ${chalk.bold('命令:')}
         case 'clear': {
           agent.getContext().clear();
           console.log(chalk.gray('会话已清空\n'));
+          processing = false;
+          rl.resume();
+          rl.prompt();
+          return;
+        }
+        case 'model': {
+          const modelName = args[0];
+          if (!modelName) {
+            console.log(chalk.bold('可用模型:'));
+            for (const [name, cfg] of Object.entries(config.models)) {
+              const isCurrent = cfg.baseUrl === currentLlmConfig.baseUrl && cfg.model === currentLlmConfig.model;
+              console.log(`  ${isCurrent ? chalk.green('→') : ' '} ${name}: ${cfg.model} (${cfg.baseUrl})`);
+            }
+            console.log(chalk.gray('\n用法: /model <名称>\n'));
+          } else if (config.models[modelName]) {
+            currentLlmConfig = config.models[modelName];
+            agent.switchLLM(new OpenAIAdapter(currentLlmConfig));
+            console.log(chalk.green(`✓ 已切换到模型: ${modelName} (${currentLlmConfig.model})\n`));
+          } else {
+            console.log(chalk.red(`未知模型: ${modelName}。可用: ${Object.keys(config.models).join(', ')}\n`));
+          }
           processing = false;
           rl.resume();
           rl.prompt();

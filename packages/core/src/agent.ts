@@ -186,4 +186,9 @@ export class Agent {
   getContext(): ContextPipeline {
     return this.context;
   }
+
+  /** 运行时切换 LLM 适配器 */
+  switchLLM(newLlm: LLMAdapter): void {
+    this.llm = newLlm;
+  }
 }
