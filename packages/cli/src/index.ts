@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
-import { Agent, OpenAIAdapter, ToolRegistry } from '@mako/core';
+import { Agent, OpenAIAdapter, ToolRegistry, DANGEROUS_TOOLS } from '@mako/core';
+import { loadMCPConfig, MCPServerManager } from '@mako/mcp';
 import {
   readFileTool, writeFileTool, replaceInFileTool,
   listDirectoryTool, bashTool, searchTool, fetchUrlTool,
@@ -290,6 +291,33 @@ async function main() {
   toolRegistry.register(bashTool);
   toolRegistry.register(searchTool);
   toolRegistry.register(fetchUrlTool);
+
+  // MCP Server 初始化
+  const mcpConfig = loadMCPConfig(join(process.cwd(), '.mako', 'config.json'));
+  let mcpManager: MCPServerManager | null = null;
+
+  if (mcpConfig.servers.length > 0) {
+    mcpManager = new MCPServerManager(mcpConfig.servers, toolRegistry);
+    const results = await mcpManager.initializeAll();
+    const connected = results.filter(r => r.status === 'connected');
+    const totalTools = connected.reduce((sum, r) => sum + r.tools.length, 0);
+
+    if (connected.length > 0) {
+      console.log(chalk.green(`✓ MCP: ${connected.length}/${results.length} Server 已连接，${totalTools} 个工具可用`));
+    }
+
+    // 将 MCP 危险工具加入确认集合
+    const mcpDangerous = mcpManager.getDangerousTools();
+    for (const tool of mcpDangerous) {
+      DANGEROUS_TOOLS.add(tool);
+    }
+
+    // Show errors for failed servers
+    const failed = results.filter(r => r.status === 'error');
+    for (const f of failed) {
+      console.log(chalk.yellow(`  ⚠ MCP [${f.name}]: ${f.error}`));
+    }
+  }
 
   // 加载 Steering 规则
   const steering = loadSteering();
@@ -640,6 +668,23 @@ ${chalk.bold('命令:')}
   rl.on('close', async () => {
     await agent.getContext().save(sessionId);
     console.log(chalk.gray('\n再见！'));
+    process.exit(0);
+  });
+
+  // MCP 进程退出清理
+  const cleanup = async () => {
+    if (mcpManager) {
+      await mcpManager.shutdownAll();
+    }
+  };
+
+  process.on('SIGINT', async () => {
+    await cleanup();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    await cleanup();
     process.exit(0);
   });
 }
