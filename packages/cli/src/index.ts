@@ -245,7 +245,14 @@ function loadConfigOrExit() {
   try {
     return loadConfig();
   } catch (error) {
-    console.error(chalk.red((error as Error).message));
+    const msg = (error as Error).message;
+    if (msg.includes('API Key')) {
+      console.log(chalk.yellow('\n⚠ 首次使用需要配置模型\n'));
+      console.log(chalk.gray('即将进入配置向导...\n'));
+      // 返回 null 让 main 函数处理
+      return null;
+    }
+    console.error(chalk.red(msg));
     process.exit(1);
   }
 }
@@ -277,7 +284,17 @@ async function runTrace() {
 }
 
 async function main() {
-  const config = loadConfigOrExit();
+  let config = loadConfigOrExit();
+
+  // 未配置时自动进入配置引导
+  if (!config) {
+    await runConfig();
+    config = loadConfigOrExit();
+    if (!config) {
+      console.error(chalk.red('配置未完成，退出'));
+      process.exit(1);
+    }
+  }
 
   const llm = new OpenAIAdapter(config.llm);
   let currentLlmConfig = config.llm;
