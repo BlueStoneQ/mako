@@ -321,6 +321,11 @@ async function main() {
 
   // 加载 Steering 规则
   const steering = loadSteering();
+  // 加载 Skills
+  const skills = loadSkills();
+  if (skills.length > 0) {
+    console.log(chalk.gray(`  Skills: ${skills.map(s => s.name).join(', ')}`));
+  }
   const systemPrompt = config.agent.systemPrompt + steering;
 
   const agent = new Agent(
@@ -567,6 +572,11 @@ ${chalk.bold('命令:')}
     if (currentMode === 'spec') {
       const specPrompt = getSpecPrompt(specPhase);
       agent.getContext().updateConfig?.({ systemPrompt: config.agent.systemPrompt + steering + '\n\n' + specPrompt });
+    } else {
+      // Vibe 模式：自动匹配 Skills 并注入 prompt
+      const matched = matchSkills(message, skills);
+      const skillPrompt = buildSkillPrompt(matched);
+      agent.getContext().updateConfig?.({ systemPrompt: config.agent.systemPrompt + steering + skillPrompt });
     }
 
     try {

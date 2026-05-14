@@ -89,3 +89,26 @@
 > 差异化在于：内置了 Agent 可观测性（能看清 Agent 为什么失败）和评测框架（能系统化评估不同模型的 Coding 能力）。
 > 
 > 我用它产出了一份 MiMo vs Claude vs GPT 的 Coding 能力对比报告，定位了模型的薄弱环节，给出了改进方向。"
+
+
+---
+
+## 方向 5：多 Agent 协作（Multi-Agent）
+
+**核心概念**：单个 Agent 处理复杂任务时能力有限，多个专业化 Agent 协作可以提升效率和质量。
+
+**具体能力**：
+- 主 Agent 可以委派子任务给专业 Agent（如"代码审查 Agent"、"测试 Agent"、"文档 Agent"）
+- Agent 之间通过消息传递协作，各自有独立的上下文和工具集
+- 支持并行执行（多个 Agent 同时工作）和串行编排（流水线模式）
+
+**关于 A2A（Agent-to-Agent）协议**：
+- Google 提出的 Agent 间通信标准协议
+- 定义了 Agent 发现、任务委派、状态同步的标准格式
+- 对于 Mako 当前阶段可能太重——我们的多 Agent 是进程内的，不需要跨网络通信
+- 建议：先用轻量的进程内消息传递实现多 Agent，后续如果需要跨进程/跨网络再考虑 A2A
+
+**落地路径**：
+1. v0.4：进程内 Sub-Agent（主 Agent 委派子任务，共享 Tool Registry）
+2. v0.5：专业化 Agent 预设（code-review-agent、test-agent、doc-agent）
+3. v1.0+：可选 A2A 协议支持（跨进程 Agent 通信）

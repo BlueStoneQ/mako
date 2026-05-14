@@ -89,6 +89,41 @@ Create `.mako/steering.md` (or `.mako/steering/*.md`) to give Mako project-speci
 - Always run tests after modifying code
 ```
 
+### 🔌 MCP Integration
+
+Connect to any MCP Server to extend Mako with external tools:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"],
+      "alwaysAllow": ["read_file"]
+    }
+  }
+}
+```
+
+MCP tools are auto-discovered on startup and registered as `mcp_{server}_{tool}`.
+
+### 🎭 Skills
+
+Create `.mako/skills/*.md` to define reusable skill packs with auto-activation:
+
+```markdown
+---
+name: code-review
+description: Code review expert
+tools: [read_file, search]
+triggers:
+  keywords: [review, CR]
+---
+You are a code review expert. Focus on correctness, performance, and readability.
+```
+
+Skills auto-activate when trigger keywords are detected in user messages.
+
 ### 🔧 Built-in Tools
 
 | Tool | Description |
