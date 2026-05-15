@@ -1,4 +1,4 @@
-import type { Tool } from '@mako/core';
+import type { Tool } from '@mako-agent/core';
 import type { MCPToolDefinition } from './types.js';
 
 // We need a reference to MCPClient for the execute callback, but to avoid circular deps,

@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import type { Tool } from '@mako/core';
+import type { Tool } from '@mako-agent/core';
 
 export const bashTool: Tool = {
   name: 'bash',

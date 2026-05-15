@@ -19,7 +19,7 @@ Mako is an open-source AI Coding Agent that runs in your terminal. It can read c
 
 ```bash
 # Install globally
-npm install -g @mako/cli
+npm install -g @mako-agent/cli
 
 # Configure your model
 mako config
@@ -192,9 +192,10 @@ Skills auto-activate when trigger keywords are detected in user messages.
 ## Architecture
 
 ```
-packages/core   — Agent ReAct loop, LLM adapter, context manager, tool registry
-packages/tools  — 7 built-in tools
-packages/cli    — Terminal interface, config, steering, trace
+packages/core   — Agent ReAct loop, LLM adapter, context manager, tool registry  (@mako-agent/core)
+packages/tools  — 7 built-in tools  (@mako-agent/tools)
+packages/mcp    — MCP client integration  (@mako-agent/mcp)
+packages/cli    — Terminal interface, config, steering, trace  (@mako-agent/cli)
 ```
 
 See [docs/architecture.md](./docs/architecture.md) for the full design.

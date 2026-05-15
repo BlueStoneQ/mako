@@ -1,18 +1,30 @@
 {
-  "name": "@mako/cli",
+  "name": "@mako-agent/cli",
   "version": "0.1.0",
+  "description": "Mako 🦈 - Open-source AI Coding Agent. Model-agnostic, extensible, observable.",
   "type": "module",
   "bin": {
     "mako": "dist/index.js"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BlueStoneQ/mako.git",
+    "directory": "packages/cli"
+  },
+  "keywords": ["ai", "agent", "coding", "cli", "terminal", "llm", "openai", "claude", "deepseek"],
+  "author": "BlueStoneQ",
+  "license": "MIT",
   "scripts": {
     "build": "tsup",
     "test": "vitest run"
   },
   "dependencies": {
-    "@mako/core": "workspace:*",
-    "@mako/mcp": "workspace:*",
-    "@mako/tools": "workspace:*",
+    "@mako-agent/core": "workspace:*",
+    "@mako-agent/mcp": "workspace:*",
+    "@mako-agent/tools": "workspace:*",
     "chalk": "^5.3.0",
     "ora": "^8.0.0"
   },

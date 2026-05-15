@@ -1,6 +1,7 @@
 {
-  "name": "@mako/core",
+  "name": "@mako-agent/core",
   "version": "0.1.0",
+  "description": "Core engine for Mako AI Coding Agent - ReAct loop, LLM adapter, context pipeline, tool registry",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,6 +15,17 @@
       "types": "./dist/llm/index.d.ts"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BlueStoneQ/mako.git",
+    "directory": "packages/core"
+  },
+  "keywords": ["ai", "agent", "coding", "llm", "react-loop", "openai"],
+  "author": "BlueStoneQ",
+  "license": "MIT",
   "scripts": {
     "build": "tsup",
     "test": "vitest run"

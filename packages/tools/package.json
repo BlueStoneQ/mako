@@ -1,6 +1,7 @@
 {
-  "name": "@mako/tools",
+  "name": "@mako-agent/tools",
   "version": "0.1.0",
+  "description": "Built-in tools for Mako AI Coding Agent - file ops, bash, search, fetch",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,6 +11,17 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BlueStoneQ/mako.git",
+    "directory": "packages/tools"
+  },
+  "keywords": ["ai", "agent", "tools", "file", "bash", "search"],
+  "author": "BlueStoneQ",
+  "license": "MIT",
   "scripts": {
     "build": "tsup",
     "test": "vitest run"
@@ -18,10 +30,10 @@
     "fast-glob": "^3.3.0"
   },
   "peerDependencies": {
-    "@mako/core": "workspace:*"
+    "@mako-agent/core": ">=0.1.0"
   },
   "devDependencies": {
-    "@mako/core": "workspace:*",
+    "@mako-agent/core": "workspace:*",
     "@types/node": "^20.11.0",
     "typescript": "^5.4.0",
     "tsup": "^8.0.0",

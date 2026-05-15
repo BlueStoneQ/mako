@@ -1,6 +1,6 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { Tool } from '@mako/core';
+import type { Tool } from '@mako-agent/core';
 
 export const writeFileTool: Tool = {
   name: 'write_file',

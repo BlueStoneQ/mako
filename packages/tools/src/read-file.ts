@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import type { Tool } from '@mako/core';
+import type { Tool } from '@mako-agent/core';
 
 export const readFileTool: Tool = {
   name: 'read_file',

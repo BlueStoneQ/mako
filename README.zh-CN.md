@@ -19,7 +19,7 @@ Mako 是一个开源的 AI Coding Agent，运行在终端中。它能读代码�
 
 ```bash
 # 全局安装
-npm install -g @mako/cli
+npm install -g @mako-agent/cli
 
 # 配置模型
 mako config
@@ -195,9 +195,10 @@ Agent 整体表现良好。bash 工具有 1 次错误，建议检查...
 ## 架构
 
 ```
-packages/core   — Agent ReAct 循环、LLM 适配器、上下文管理、工具注册
-packages/tools  — 7 个内置工具
-packages/cli    — 终端交互、配置、Steering、Trace
+packages/core   — Agent ReAct 循环、LLM 适配器、上下文管理、工具注册  (@mako-agent/core)
+packages/tools  — 7 个内置工具  (@mako-agent/tools)
+packages/mcp    — MCP 客户端集成  (@mako-agent/mcp)
+packages/cli    — 终端交互、配置、Steering、Trace  (@mako-agent/cli)
 ```
 
 **设计哲学**：万物皆插件（Everything is a Plugin）。当前 v0.1 搭好骨架，后续演进为完整的微内核 + 插件系统。

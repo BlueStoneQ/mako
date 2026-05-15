@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import type { Tool } from '@mako/core';
+import type { Tool } from '@mako-agent/core';
 
 export const listDirectoryTool: Tool = {
   name: 'list_directory',

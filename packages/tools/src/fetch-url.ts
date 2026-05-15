@@ -1,4 +1,4 @@
-import type { Tool } from '@mako/core';
+import type { Tool } from '@mako-agent/core';
 
 export const fetchUrlTool: Tool = {
   name: 'fetch_url',

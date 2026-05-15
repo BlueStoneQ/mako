@@ -8,7 +8,7 @@ importers:
 
   .:
     devDependencies:
-      '@mako/cli':
+      '@mako-agent/cli':
         specifier: workspace:*
         version: link:packages/cli
       '@typescript-eslint/eslint-plugin':
@@ -35,13 +35,13 @@ importers:
 
   packages/cli:
     dependencies:
-      '@mako/core':
+      '@mako-agent/core':
         specifier: workspace:*
         version: link:../core
-      '@mako/mcp':
+      '@mako-agent/mcp':
         specifier: workspace:*
         version: link:../mcp
-      '@mako/tools':
+      '@mako-agent/tools':
         specifier: workspace:*
         version: link:../tools
       chalk:
@@ -94,7 +94,7 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@mako/core':
+      '@mako-agent/core':
         specifier: workspace:*
         version: link:../core
       '@modelcontextprotocol/sdk':
@@ -123,7 +123,7 @@ importers:
         specifier: ^3.3.0
         version: 3.3.3
     devDependencies:
-      '@mako/core':
+      '@mako-agent/core':
         specifier: workspace:*
         version: link:../core
       '@types/node':

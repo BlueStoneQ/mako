@@ -1,5 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import type { Tool } from '@mako/core';
+import type { Tool } from '@mako-agent/core';
 
 export const replaceInFileTool: Tool = {
   name: 'replace_in_file',

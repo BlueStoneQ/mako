@@ -4,12 +4,12 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
-import { Agent, OpenAIAdapter, ToolRegistry, DANGEROUS_TOOLS } from '@mako/core';
-import { loadMCPConfig, MCPServerManager } from '@mako/mcp';
+import { Agent, OpenAIAdapter, ToolRegistry, DANGEROUS_TOOLS } from '@mako-agent/core';
+import { loadMCPConfig, MCPServerManager } from '@mako-agent/mcp';
 import {
   readFileTool, writeFileTool, replaceInFileTool,
   listDirectoryTool, bashTool, searchTool, fetchUrlTool,
-} from '@mako/tools';
+} from '@mako-agent/tools';
 import { loadConfig } from './config.js';
 import { loadSteering } from './steering.js';
 import { TraceCollector, saveTrace, loadTraces, summarizeTraces } from './trace.js';

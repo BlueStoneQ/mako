@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import fg from 'fast-glob';
-import type { Tool } from '@mako/core';
+import type { Tool } from '@mako-agent/core';
 
 const BINARY_EXTENSIONS = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp',

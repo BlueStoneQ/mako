@@ -1,6 +1,6 @@
 import { writeFileSync, mkdirSync, readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { AgentEvent } from '@mako/core';
+import type { AgentEvent } from '@mako-agent/core';
 
 /** 单次 Trace 记录 */
 export interface TraceEntry {

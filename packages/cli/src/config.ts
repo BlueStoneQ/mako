@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { AgentConfig, LLMConfig, ContextConfig } from '@mako/core';
+import type { AgentConfig, LLMConfig, ContextConfig } from '@mako-agent/core';
 import { DEFAULT_SYSTEM_PROMPT } from './system-prompt.js';
 
 export interface MakoConfig {

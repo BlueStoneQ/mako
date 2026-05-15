@@ -1,4 +1,4 @@
-import { ToolRegistry } from '@mako/core';
+import { ToolRegistry } from '@mako-agent/core';
 import type { MCPServerConfig, MCPServerInfo } from './types.js';
 import { MCPClient } from './mcp-client.js';
 import { convertMCPTools } from './tool-converter.js';
